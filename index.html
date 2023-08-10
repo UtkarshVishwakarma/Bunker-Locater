@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>India Map with Nearest Bunker Locator</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.2.0/dist/leaflet-geosearch.min.css">
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script src="https://unpkg.com/leaflet-geosearch@3.2.0/dist/leaflet-geosearch.min.js"></script>
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/235/235861.png">
+    <style>
+        body{
+            overflow: hidden;
+            scroll-behavior: smooth;
+        }
+        #map {
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #locate-button {
+            position: absolute;
+            z-index: 1000;
+            top: 20px;
+            right: 20px;
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer;
+            font-family: 'Poppins', Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <button id="locate-button">Locate Nearest Bunker</button>
+
+    <script>
+        var map = L.map("map").setView([23.1815, 79.9864], 13); // Jabalpur coordinates
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+
+        // Generate random bunkers with even more distance between them
+        var bunkers = [];
+        var numBunkers = 30; // Number of bunkers to generate
+
+        for (var i = 0; i < numBunkers; i++) {
+            var randomLat = 23.1815 + (Math.random() - 0.5) * 10; // Larger random offset
+            var randomLng = 79.9864 + (Math.random() - 0.5) * 10; // Larger random offset
+
+            var bunkerMarker = L.marker([randomLat, randomLng]).addTo(map);
+            bunkerMarker.bindPopup("Bunker " + (i + 1));
+
+            bunkers.push(bunkerMarker);
+        }
+
+        // Add locate button functionality
+        var locateButton = document.getElementById("locate-button");
+        locateButton.addEventListener("click", function () {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    var userLatLng = [position.coords.latitude, position.coords.longitude];
+                    var nearestBunker = findNearestBunker(userLatLng);
+
+                    // Remove any existing location marker
+                    if (window.locationMarker) {
+                        map.removeLayer(window.locationMarker);
+                    }
+
+                    // Add location marker with a different color
+                    var locationIcon = L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    });
+
+                    var locationMarker = L.marker(userLatLng, { icon: locationIcon }).addTo(map);
+                    locationMarker.bindPopup("Your Location");
+
+                    window.locationMarker = locationMarker;
+
+                    if (nearestBunker) {
+                        map.panTo(nearestBunker.getLatLng());
+                        nearestBunker.openPopup();
+
+                        // Clear any existing routes
+                        if (window.routingControl) {
+                            map.removeControl(window.routingControl);
+                        }
+
+                        // Add route
+                        var routeControl = L.Routing.control({
+                            waypoints: [
+                                L.latLng(userLatLng[0], userLatLng[1]),
+                                L.latLng(nearestBunker.getLatLng())
+                            ],
+                            routeWhileDragging: true,
+                            lineOptions: { styles: [{ color: 'red', opacity: 0.8, weight: 4 }] },
+                        }).addTo(map);
+
+                        window.routingControl = routeControl;
+                    }
+                });
+            }
+        });
+
+        // Function to find nearest bunker
+        function findNearestBunker(userLatLng) {
+            var nearestBunker = null;
+            var minDistance = Number.MAX_VALUE;
+
+            for (var i = 0; i < bunkers.length; i++) {
+                var bunker = bunkers[i];
+                var distance = bunker.getLatLng().distanceTo(userLatLng);
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestBunker = bunker;
+                }
+            }
+
+            return nearestBunker;
+        }
+    </script>
+</body>
+</html>
