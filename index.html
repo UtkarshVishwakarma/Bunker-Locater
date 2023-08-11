@@ -128,6 +128,84 @@
 
             return nearestBunker;
         }
+
+        // ...
+
+// Function to handle click on a bunker marker
+function onBunkerClick(event) {
+    var clickedBunker = event.target;
+    var userLatLng = window.locationMarker ? window.locationMarker.getLatLng() : null;
+
+    // Clear any existing routes
+    if (window.routingControl) {
+        map.removeControl(window.routingControl);
+    }
+
+    if (userLatLng) {
+        // Add route
+        var routeControl = L.Routing.control({
+            waypoints: [
+                L.latLng(userLatLng.lat, userLatLng.lng),
+                L.latLng(clickedBunker.getLatLng())
+            ],
+            routeWhileDragging: true,
+            lineOptions: { styles: [{ color: 'red', opacity: 0.8, weight: 4 }] },
+        }).addTo(map);
+
+        window.routingControl = routeControl;
+    }
+
+    // Update the popup content with route information
+    var distanceToBunker = userLatLng ? userLatLng.distanceTo(clickedBunker.getLatLng()) : null;
+    clickedBunker.setPopupContent("Bunker " + clickedBunker.options.bunkerId + "<br>Distance: " + distanceToBunker.toFixed(2) + " meters");
+}
+
+// Add bunker click event listener to each bunker marker
+for (var i = 0; i < bunkers.length; i++) {
+    var bunker = bunkers[i];
+    bunker.options.bunkerId = i + 1; // Assign a unique ID to each bunker
+    bunker.on('click', onBunkerClick);
+}
+
+// ...
+// ...
+
+// Add location marker with a different color
+// ...
+
+// Add locate button functionality
+var locateButton = document.getElementById("locate-button");
+locateButton.addEventListener("click", function () {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (position) {
+            var userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
+            var nearestBunker = findNearestBunker(userLatLng);
+
+            // Remove any existing location marker and routing control
+            if (window.locationMarker) {
+                map.removeLayer(window.locationMarker);
+            }
+            if (window.routingControl) {
+                map.removeControl(window.routingControl);
+            }
+
+
+
+            var locationMarker = L.marker(userLatLng, { icon: locationIcon }).addTo(map);
+            locationMarker.bindPopup("Your Location");
+
+            window.locationMarker = locationMarker;
+
+            // ...
+
+            // Rest of the code (calculating route, adding routing control) remains the same
+        });
+    }
+});
+
+// ...
+
     </script>
 </body>
 </html>
+
